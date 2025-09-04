@@ -234,13 +234,46 @@ def execute_method(
         - result: Result of the method (if success)
         - error: Error message (if failure)
     """
+    import ast, json
+
     odoo = ctx.request_context.lifespan_context.odoo
     try:
-        args = args or []
-        kwargs = kwargs or {}
+        # ---- Tolerant parsing for string inputs from agents ----
+        if isinstance(args, str):
+            # try JSON first, fall back to Python literal
+            try:
+                args = json.loads(args)
+            except json.JSONDecodeError:
+                args = ast.literal_eval(args)
+        if args is None:
+            args = []
 
-        # Special handling for search methods like search, search_count, search_read
+        if isinstance(kwargs, str):
+            try:
+                kwargs = json.loads(kwargs.replace("'", '"'))
+            except json.JSONDecodeError:
+                kwargs = ast.literal_eval(kwargs)
+        if kwargs is None:
+            kwargs = {}
+
+        # ---- Ensure search/search_count/search_read always have a domain ----
         search_methods = ["search", "search_count", "search_read"]
+
+        # If domain was provided in kwargs, move it to args[0]
+        if (
+            method in search_methods
+            and "domain" in kwargs
+            and (not args or len(args) == 0)
+        ):
+            args = [kwargs.pop("domain")]
+
+        # If still no domain, default to [] (all)
+        if method in search_methods and (
+            not args or len(args) == 0 or args[0] in (None, {}, "")
+        ):
+            args = [[]]
+
+        # ---- Your existing domain normalization for args[0] (unchanged) ----
         if method in search_methods and args:
             # Search methods usually have domain as the first parameter
             # args: [[domain], limit, offset, ...] or [domain, limit, offset, ...]
@@ -309,8 +342,6 @@ def execute_method(
                             domain_list = parsed_domain
                     except json.JSONDecodeError:
                         try:
-                            import ast
-
                             parsed_domain = ast.literal_eval(domain)
                             if isinstance(parsed_domain, list):
                                 domain_list = parsed_domain
