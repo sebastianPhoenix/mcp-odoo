@@ -1,6 +1,6 @@
 {
-  "url": "https://your-odoo-instance.com",
-  "db": "your-database-name",
-  "username": "your-username",
-  "password": "your-password-or-api-key"
-} 
+  "ODOO_BASE_URL": "https://your-odoo-instance.example.com",
+  "ODOO_DB": "your_database_name",
+  "ODOO_USERNAME": "your_username",
+  "ODOO_PASSWORD": "<your_password_or_api_key>"
+}
