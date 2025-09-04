@@ -74,7 +74,7 @@ An MCP server implementation that integrates with Odoo ERP systems, enabling AI 
 ```
 
 2. Alternatively, use environment variables:
-   * `ODOO_URL`: Your Odoo server URL
+   * `ODOO_URL` or `ODOO_BASE_URL`: Your Odoo server URL
    * `ODOO_DB`: Database name
    * `ODOO_USERNAME`: Login username
    * `ODOO_PASSWORD`: Password or API key
