@@ -380,16 +380,18 @@ def load_config():
         os.path.expanduser("~/.odoo_config.json"),
     ]
 
-    # Try environment variables first
-    if all(
-        var in os.environ
-        for var in ["ODOO_URL", "ODOO_DB", "ODOO_USERNAME", "ODOO_PASSWORD"]
-    ):
+    # Try environment variables first (support both ODOO_URL and ODOO_BASE_URL)
+    env_url = os.environ.get("ODOO_URL") or os.environ.get("ODOO_BASE_URL")
+    env_db = os.environ.get("ODOO_DB")
+    env_username = os.environ.get("ODOO_USERNAME")
+    env_password = os.environ.get("ODOO_PASSWORD")
+
+    if all([env_url, env_db, env_username, env_password]):
         return {
-            "url": os.environ["ODOO_URL"],
-            "db": os.environ["ODOO_DB"],
-            "username": os.environ["ODOO_USERNAME"],
-            "password": os.environ["ODOO_PASSWORD"],
+            "url": env_url,
+            "db": env_db,
+            "username": env_username,
+            "password": env_password,
         }
 
     # Try to load from file
@@ -397,7 +399,26 @@ def load_config():
         expanded_path = os.path.expanduser(path)
         if os.path.exists(expanded_path):
             with open(expanded_path, "r") as f:
-                return json.load(f)
+                data = json.load(f)
+            # File may use either simple keys or environment-style keys
+            if {"url", "db", "username", "password"} <= data.keys():
+                return data
+            if {
+                "ODOO_BASE_URL",
+                "ODOO_DB",
+                "ODOO_USERNAME",
+                "ODOO_PASSWORD",
+            } <= data.keys():
+                return {
+                    "url": data["ODOO_BASE_URL"],
+                    "db": data["ODOO_DB"],
+                    "username": data["ODOO_USERNAME"],
+                    "password": data["ODOO_PASSWORD"],
+                }
+            raise ValueError(
+                "Invalid configuration file format. Expected keys: url/db/username/"
+                "password or ODOO_BASE_URL/ODOO_DB/ODOO_USERNAME/ODOO_PASSWORD"
+            )
 
     raise FileNotFoundError(
         "No Odoo configuration found. Please create an odoo_config.json file or set environment variables."
